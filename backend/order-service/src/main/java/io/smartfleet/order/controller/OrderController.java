@@ -3,6 +3,7 @@ package io.smartfleet.order.controller;
 import io.smartfleet.common.dto.ApiResponse;
 import io.smartfleet.common.dto.OrderDto;
 import io.smartfleet.order.entity.OrderStatus;
+import io.smartfleet.order.service.DispatchService;
 import io.smartfleet.order.service.OrderService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -10,6 +11,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * REST controller for order management.
@@ -20,6 +22,7 @@ import java.util.List;
 public class OrderController {
 
     private final OrderService orderService;
+    private final DispatchService dispatchService;
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
@@ -56,5 +59,22 @@ public class OrderController {
             @RequestParam OrderStatus status) {
         OrderDto updated = orderService.updateStatus(orderId, status);
         return ApiResponse.of(updated);
+    }
+
+    @PostMapping("/{orderId}/dispatch")
+    @ResponseStatus(HttpStatus.ACCEPTED)
+    public ApiResponse<DispatchResponse> startDispatch(@PathVariable Long orderId) {
+        CompletableFuture<DispatchService.DispatchResult> future = dispatchService.startDispatch(orderId);
+        return ApiResponse.of(DispatchResponse.builder()
+                .orderId(orderId)
+                .message("Dispatch started - searching for drivers")
+                .build());
+    }
+
+    @lombok.Data
+    @lombok.Builder
+    public static class DispatchResponse {
+        private Long orderId;
+        private String message;
     }
 }

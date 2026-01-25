@@ -69,3 +69,11 @@ order:
     expanded-radius-km: 10
     offer-timeout-seconds: 30
     max-retry-attempts: 3
+
+# Dispatch Configuration
+dispatch:
+  initial-radius-km: 5.0
+  max-radius-km: 15.0
+  radius-increment-km: 5.0
+  timeout-per-tier-seconds: 30
+  max-attempts: 3

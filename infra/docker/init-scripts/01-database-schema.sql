@@ -213,3 +213,42 @@ CREATE TRIGGER update_pricing_rules_updated_at
     BEFORE UPDATE ON pricing_rules
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
+
+-- ============================================
+-- ORDERS TABLE
+-- Delivery/Trip Requests
+-- ============================================
+CREATE TABLE orders (
+    order_id SERIAL PRIMARY KEY,
+    customer_name TEXT NOT NULL,
+    customer_phone TEXT,
+    customer_email TEXT,
+    pickup_latitude NUMERIC(10,7) NOT NULL,
+    pickup_longitude NUMERIC(10,7) NOT NULL,
+    pickup_address TEXT NOT NULL,
+    delivery_latitude NUMERIC(10,7) NOT NULL,
+    delivery_longitude NUMERIC(10,7) NOT NULL,
+    delivery_address TEXT NOT NULL,
+    assigned_driver_id INTEGER REFERENCES drivers(driver_id),
+    assigned_vehicle_id INTEGER REFERENCES vehicles(vehicle_id),
+    status TEXT NOT NULL DEFAULT 'PENDING' 
+        CHECK (status IN ('PENDING', 'ASSIGNED', 'DRIVER_EN_ROUTE', 'PICKED_UP', 'IN_TRANSIT', 'NEARBY', 'DELIVERED', 'CANCELLED')),
+    estimated_price NUMERIC(10,2),
+    final_price NUMERIC(10,2),
+    scheduled_pickup_time TIMESTAMPTZ,
+    actual_pickup_time TIMESTAMPTZ,
+    actual_delivery_time TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ
+);
+
+-- Indexes for order queries
+CREATE INDEX idx_orders_status ON orders(status);
+CREATE INDEX idx_orders_driver ON orders(assigned_driver_id);
+CREATE INDEX idx_orders_created_at ON orders(created_at);
+
+-- Update trigger for orders
+CREATE TRIGGER update_orders_updated_at
+    BEFORE UPDATE ON orders
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();

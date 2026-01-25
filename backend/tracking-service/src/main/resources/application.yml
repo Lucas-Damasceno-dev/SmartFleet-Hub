@@ -67,3 +67,24 @@ springdoc:
     path: /api-docs
   swagger-ui:
     path: /swagger-ui.html
+
+# Kafka Topics
+kafka:
+  topics:
+    telemetry: telemetry-topic
+
+# Simulation Configuration (dev profile only)
+simulation:
+  enabled: false
+  center-latitude: -23.5629
+  center-longitude: -46.6544
+
+---
+# Development Profile
+spring:
+  config:
+    activate:
+      on-profile: dev
+
+simulation:
+  enabled: true
