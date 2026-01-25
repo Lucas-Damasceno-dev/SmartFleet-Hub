@@ -1,0 +1,508 @@
+# ==========================================
+# SmartFleet Hub - Production Environment
+# Docker Compose for Production Deployment
+# ==========================================
+# SECURITY: Use secrets management for sensitive values
+# Do NOT use default passwords in production
+# ==========================================
+
+name: smartfleet-prod
+
+services:
+  # ============================================
+  # DATA LAYER
+  # ============================================
+  
+  postgres:
+    image: timescale/timescaledb-ha:pg16
+    container_name: sf-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./infra/docker/init-scripts:/docker-entrypoint-initdb.d:ro
+    networks:
+      - sf-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 4G
+        reservations:
+          cpus: '1'
+          memory: 2G
+
+  redis:
+    image: redis:7-alpine
+    container_name: sf-redis
+    command: redis-server --requirepass ${REDIS_PASSWORD}
+    volumes:
+      - redis_data:/data
+    networks:
+      - sf-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+
+  # ============================================
+  # EVENT STREAMING (Kafka)
+  # ============================================
+  
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    container_name: sf-zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    networks:
+      - sf-net
+    healthcheck:
+      test: ["CMD-SHELL", "echo ruok | nc localhost 2181 | grep imok"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: sf-kafka
+    depends_on:
+      zookeeper:
+        condition: service_healthy
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: sf-zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://sf-kafka:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+    networks:
+      - sf-net
+    healthcheck:
+      test: ["CMD-SHELL", "kafka-topics --bootstrap-server localhost:29092 --list"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '1'
+          memory: 1G
+
+  # ============================================
+  # CDC - Change Data Capture (Debezium)
+  # ============================================
+  
+  debezium:
+    image: debezium/connect:2.5
+    container_name: sf-debezium
+    depends_on:
+      kafka:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    environment:
+      BOOTSTRAP_SERVERS: sf-kafka:29092
+      GROUP_ID: smartfleet-connect
+      CONFIG_STORAGE_TOPIC: sf_connect_configs
+      OFFSET_STORAGE_TOPIC: sf_connect_offsets
+      STATUS_STORAGE_TOPIC: sf_connect_statuses
+      CONFIG_STORAGE_REPLICATION_FACTOR: 1
+      OFFSET_STORAGE_REPLICATION_FACTOR: 1
+      STATUS_STORAGE_REPLICATION_FACTOR: 1
+      KEY_CONVERTER: org.apache.kafka.connect.json.JsonConverter
+      VALUE_CONVERTER: org.apache.kafka.connect.json.JsonConverter
+    networks:
+      - sf-net
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8083/connectors || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+
+  # ============================================
+  # SECURITY (Keycloak)
+  # ============================================
+  
+  keycloak:
+    image: quay.io/keycloak/keycloak:24.0
+    container_name: sf-keycloak
+    command: start --optimized
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://sf-postgres:5432/${POSTGRES_DB}
+      KC_DB_USERNAME: ${POSTGRES_USER}
+      KC_DB_PASSWORD: ${POSTGRES_PASSWORD}
+      KC_HOSTNAME: ${KEYCLOAK_HOSTNAME}
+      KC_HTTPS_CERTIFICATE_FILE: /opt/keycloak/conf/cert.pem
+      KC_HTTPS_CERTIFICATE_KEY_FILE: /opt/keycloak/conf/key.pem
+      KC_HEALTH_ENABLED: "true"
+      KC_METRICS_ENABLED: "true"
+    volumes:
+      - ./infra/keycloak/certs:/opt/keycloak/conf:ro
+    networks:
+      - sf-net
+    healthcheck:
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/localhost/8080 && echo -e 'GET /health/ready HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n' >&3 && cat <&3 | grep -q '200 OK'"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+
+  # ============================================
+  # BACKEND SERVICES
+  # ============================================
+
+  api-gateway:
+    image: ${DOCKER_REGISTRY}/smartfleet/api-gateway:${IMAGE_TAG:-latest}
+    container_name: sf-api-gateway
+    depends_on:
+      keycloak:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      JAVA_TOOL_OPTIONS: >-
+        -javaagent:/otel/opentelemetry-javaagent.jar
+        -Dotel.service.name=api-gateway
+        -Dotel.exporter.otlp.endpoint=http://sf-tempo:4317
+    volumes:
+      - otel_agent:/otel:ro
+    ports:
+      - "8080:8080"
+    networks:
+      - sf-net
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+
+  auth-service:
+    image: ${DOCKER_REGISTRY}/smartfleet/auth-service:${IMAGE_TAG:-latest}
+    container_name: sf-auth-service
+    depends_on:
+      keycloak:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      KEYCLOAK_URL: http://sf-keycloak:8080
+      JAVA_TOOL_OPTIONS: >-
+        -javaagent:/otel/opentelemetry-javaagent.jar
+        -Dotel.service.name=auth-service
+        -Dotel.exporter.otlp.endpoint=http://sf-tempo:4317
+    volumes:
+      - otel_agent:/otel:ro
+    networks:
+      - sf-net
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+
+  order-service:
+    image: ${DOCKER_REGISTRY}/smartfleet/order-service:${IMAGE_TAG:-latest}
+    container_name: sf-order-service
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      DB_HOST: sf-postgres
+      KAFKA_BOOTSTRAP_SERVERS: sf-kafka:29092
+      JAVA_TOOL_OPTIONS: >-
+        -javaagent:/otel/opentelemetry-javaagent.jar
+        -Dotel.service.name=order-service
+        -Dotel.exporter.otlp.endpoint=http://sf-tempo:4317
+    volumes:
+      - otel_agent:/otel:ro
+    networks:
+      - sf-net
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+
+  tracking-service:
+    image: ${DOCKER_REGISTRY}/smartfleet/tracking-service:${IMAGE_TAG:-latest}
+    container_name: sf-tracking-service
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      DB_HOST: sf-postgres
+      REDIS_HOST: sf-redis
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      KAFKA_BOOTSTRAP_SERVERS: sf-kafka:29092
+      JAVA_TOOL_OPTIONS: >-
+        -javaagent:/otel/opentelemetry-javaagent.jar
+        -Dotel.service.name=tracking-service
+        -Dotel.exporter.otlp.endpoint=http://sf-tempo:4317
+    volumes:
+      - otel_agent:/otel:ro
+    networks:
+      - sf-net
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+      replicas: 2
+
+  geo-service:
+    image: ${DOCKER_REGISTRY}/smartfleet/geo-service:${IMAGE_TAG:-latest}
+    container_name: sf-geo-service
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      DB_HOST: sf-postgres
+      GOOGLE_MAPS_API_KEY: ${GOOGLE_MAPS_API_KEY}
+      JAVA_TOOL_OPTIONS: >-
+        -javaagent:/otel/opentelemetry-javaagent.jar
+        -Dotel.service.name=geo-service
+        -Dotel.exporter.otlp.endpoint=http://sf-tempo:4317
+    volumes:
+      - otel_agent:/otel:ro
+    networks:
+      - sf-net
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+
+  payment-service:
+    image: ${DOCKER_REGISTRY}/smartfleet/payment-service:${IMAGE_TAG:-latest}
+    container_name: sf-payment-service
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      DB_HOST: sf-postgres
+      STRIPE_API_KEY: ${STRIPE_API_KEY}
+      JAVA_TOOL_OPTIONS: >-
+        -javaagent:/otel/opentelemetry-javaagent.jar
+        -Dotel.service.name=payment-service
+        -Dotel.exporter.otlp.endpoint=http://sf-tempo:4317
+    volumes:
+      - otel_agent:/otel:ro
+    networks:
+      - sf-net
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+
+  notification-service:
+    image: ${DOCKER_REGISTRY}/smartfleet/notification-service:${IMAGE_TAG:-latest}
+    container_name: sf-notification-service
+    depends_on:
+      kafka:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      KAFKA_BOOTSTRAP_SERVERS: sf-kafka:29092
+      FCM_CREDENTIALS_PATH: /secrets/firebase-credentials.json
+      JAVA_TOOL_OPTIONS: >-
+        -javaagent:/otel/opentelemetry-javaagent.jar
+        -Dotel.service.name=notification-service
+        -Dotel.exporter.otlp.endpoint=http://sf-tempo:4317
+    volumes:
+      - otel_agent:/otel:ro
+      - ./secrets/firebase-credentials.json:/secrets/firebase-credentials.json:ro
+    networks:
+      - sf-net
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+
+  # ============================================
+  # FRONTEND
+  # ============================================
+
+  dashboard:
+    image: ${DOCKER_REGISTRY}/smartfleet/dashboard:${IMAGE_TAG:-latest}
+    container_name: sf-dashboard
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./infra/nginx/certs:/etc/nginx/certs:ro
+    networks:
+      - sf-net
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+
+  # ============================================
+  # OBSERVABILITY
+  # ============================================
+  
+  otel-agent-init:
+    image: curlimages/curl:latest
+    container_name: sf-otel-init
+    volumes:
+      - otel_agent:/otel
+    command: >
+      sh -c "if [ ! -f /otel/opentelemetry-javaagent.jar ]; then 
+        curl -L -o /otel/opentelemetry-javaagent.jar 
+        https://github.com/open-telemetry/opentelemetry-java-instrumentation/releases/download/v2.1.0/opentelemetry-javaagent.jar;
+      fi"
+    networks:
+      - sf-net
+
+  tempo:
+    image: grafana/tempo:latest
+    container_name: sf-tempo
+    command: ["-config.file=/etc/tempo.yaml"]
+    volumes:
+      - ./infra/docker/tempo-config.yaml:/etc/tempo.yaml:ro
+      - tempo_data:/var/tempo
+    networks:
+      - sf-net
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+
+  loki:
+    image: grafana/loki:latest
+    container_name: sf-loki
+    command: -config.file=/etc/loki/loki-config.yaml
+    volumes:
+      - ./infra/docker/loki-config.yaml:/etc/loki/loki-config.yaml:ro
+      - loki_data:/loki
+    networks:
+      - sf-net
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+
+  promtail:
+    image: grafana/promtail:latest
+    container_name: sf-promtail
+    volumes:
+      - ./infra/docker/promtail-config.yaml:/etc/promtail/config.yaml:ro
+      - /var/log:/var/log:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+    command: -config.file=/etc/promtail/config.yaml
+    networks:
+      - sf-net
+    restart: always
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: sf-grafana
+    depends_on:
+      - tempo
+      - loki
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD}
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+      GF_SERVER_ROOT_URL: ${GRAFANA_ROOT_URL}
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./infra/grafana/provisioning:/etc/grafana/provisioning:ro
+    networks:
+      - sf-net
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+
+# ============================================
+# NETWORKS
+# ============================================
+networks:
+  sf-net:
+    driver: bridge
+
+# ============================================
+# VOLUMES
+# ============================================
+volumes:
+  postgres_data:
+  redis_data:
+  tempo_data:
+  loki_data:
+  grafana_data:
+  otel_agent:

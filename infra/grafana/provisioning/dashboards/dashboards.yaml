@@ -1,0 +1,16 @@
+# Grafana Dashboards Provisioning
+# SmartFleet Hub
+
+apiVersion: 1
+
+providers:
+  - name: 'SmartFleet Dashboards'
+    orgId: 1
+    folder: 'SmartFleet'
+    folderUid: 'smartfleet'
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 30
+    allowUiUpdates: true
+    options:
+      path: /etc/grafana/provisioning/dashboards/json
