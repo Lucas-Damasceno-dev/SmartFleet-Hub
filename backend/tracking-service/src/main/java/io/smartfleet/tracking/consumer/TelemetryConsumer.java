@@ -2,6 +2,7 @@ package io.smartfleet.tracking.consumer;
 
 import io.smartfleet.common.dto.LocationDto;
 import io.smartfleet.tracking.service.TrackingService;
+import io.smartfleet.tracking.sse.LocationSseEmitterRegistry;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.KafkaListener;
@@ -13,6 +14,7 @@ import java.util.List;
 /**
  * Kafka consumer for GPS telemetry events.
  * Optimized for high-speed ingestion with batch processing.
+ * Broadcasts updates to SSE subscribers for real-time dashboard.
  */
 @Component
 @RequiredArgsConstructor
@@ -20,6 +22,7 @@ import java.util.List;
 public class TelemetryConsumer {
 
     private final TrackingService trackingService;
+    private final LocationSseEmitterRegistry sseEmitterRegistry;
 
     /**
      * Single message consumer for low-latency processing.
@@ -38,6 +41,10 @@ public class TelemetryConsumer {
 
         try {
             trackingService.ingestTelemetry(locationDto);
+            
+            // Broadcast to all SSE subscribers for real-time dashboard updates
+            sseEmitterRegistry.broadcastToAll(locationDto);
+            sseEmitterRegistry.broadcastLocationUpdate(locationDto);
         } catch (Exception e) {
             log.error("Failed to process telemetry for vehicle {}", locationDto.getVehicleId(), e);
             throw e;
@@ -59,6 +66,13 @@ public class TelemetryConsumer {
 
         try {
             trackingService.ingestTelemetryBatch(locationDtos);
+            
+            // Broadcast each location update to SSE subscribers
+            locationDtos.forEach(location -> {
+                sseEmitterRegistry.broadcastToAll(location);
+                sseEmitterRegistry.broadcastLocationUpdate(location);
+            });
+            
             ack.acknowledge();
             log.debug("Batch of {} messages processed and acknowledged", locationDtos.size());
         } catch (Exception e) {

@@ -7,10 +7,10 @@ import {
   ViewChild, 
   Input,
   effect,
-  inject
+  inject,
+  PLATFORM_ID
 } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import * as L from 'leaflet';
+import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { DriverMarker, MapConfig } from '../../models';
 import { MockDriverService } from '../../services';
 
@@ -94,10 +94,12 @@ export class FleetMapComponent implements OnInit, AfterViewInit, OnDestroy {
   };
 
   readonly driverService = inject(MockDriverService);
+  private platformId = inject(PLATFORM_ID);
 
-  private map!: L.Map;
-  private markersLayer!: L.LayerGroup;
-  private markerCache = new Map<number, L.Marker>();
+  private L: any;
+  private map!: any;
+  private markersLayer!: any;
+  private markerCache = new Map<number, any>();
 
   isLoading = true;
 
@@ -112,11 +114,19 @@ export class FleetMapComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   ngOnInit(): void {
+    if (isPlatformBrowser(this.platformId)) {
+      this.initLeaflet();
+    }
+  }
+
+  private async initLeaflet() {
+    this.L = await import('leaflet');
     this.initLeafletIcons();
+    this.initMap();
   }
 
   ngAfterViewInit(): void {
-    this.initMap();
+    // Moved to initLeaflet called in ngOnInit
   }
 
   ngOnDestroy(): void {
@@ -131,7 +141,7 @@ export class FleetMapComponent implements OnInit, AfterViewInit, OnDestroy {
 
   private initLeafletIcons(): void {
     // Custom icon definition for Leaflet
-    L.Icon.Default.mergeOptions({
+    this.L.Icon.Default.mergeOptions({
       iconRetinaUrl,
       iconUrl,
       shadowUrl,
@@ -140,7 +150,7 @@ export class FleetMapComponent implements OnInit, AfterViewInit, OnDestroy {
 
   private initMap(): void {
     // Create map instance
-    this.map = L.map(this.mapContainer.nativeElement, {
+    this.map = this.L.map(this.mapContainer.nativeElement, {
       center: this.config.center,
       zoom: this.config.zoom,
       minZoom: this.config.minZoom,
@@ -150,13 +160,13 @@ export class FleetMapComponent implements OnInit, AfterViewInit, OnDestroy {
     });
 
     // Dark theme map tiles (CartoDB Dark Matter)
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    this.L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
       maxZoom: 19,
       subdomains: 'abcd'
     }).addTo(this.map);
 
     // Create markers layer group
-    this.markersLayer = L.layerGroup().addTo(this.map);
+    this.markersLayer = this.L.layerGroup().addTo(this.map);
 
     // Map ready
     this.map.whenReady(() => {
@@ -199,10 +209,10 @@ export class FleetMapComponent implements OnInit, AfterViewInit, OnDestroy {
     });
   }
 
-  private createDriverMarker(driver: DriverMarker): L.Marker {
+  private createDriverMarker(driver: DriverMarker): any {
     const icon = this.createDriverIcon(driver.status);
     
-    const marker = L.marker([driver.latitude, driver.longitude], { icon })
+    const marker = this.L.marker([driver.latitude, driver.longitude], { icon })
       .bindPopup(this.createPopupContent(driver), {
         className: 'driver-popup'
       });
@@ -210,11 +220,11 @@ export class FleetMapComponent implements OnInit, AfterViewInit, OnDestroy {
     return marker;
   }
 
-  private createDriverIcon(status: DriverMarker['status']): L.DivIcon {
+  private createDriverIcon(status: DriverMarker['status']): any {
     const colorClass = this.getStatusColorClass(status);
     const initials = status === 'ON_DELIVERY' ? '🚗' : '👤';
 
-    return L.divIcon({
+    return this.L.divIcon({
       className: 'custom-driver-marker',
       html: `
         <div class="driver-marker ${colorClass}">
@@ -250,7 +260,7 @@ export class FleetMapComponent implements OnInit, AfterViewInit, OnDestroy {
     `;
   }
 
-  private updateMarkerPopup(marker: L.Marker, driver: DriverMarker): void {
+  private updateMarkerPopup(marker: any, driver: DriverMarker): void {
     marker.setPopupContent(this.createPopupContent(driver));
   }
 
