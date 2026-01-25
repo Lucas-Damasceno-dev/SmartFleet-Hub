@@ -8,6 +8,7 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+import java.util.UUID;
 
 /**
  * DTO for Location/GPS telemetry data.
@@ -18,12 +19,15 @@ import java.time.OffsetDateTime;
 @AllArgsConstructor
 public class LocationDto {
 
+    private OffsetDateTime timestamp;
+
     @NotNull(message = "Time is required")
     private OffsetDateTime time;
 
     @NotNull(message = "Vehicle ID is required")
     private Long vehicleId;
 
+    private UUID driverId;
     private Long tripId;
 
     @NotNull(message = "Latitude is required")
@@ -33,6 +37,7 @@ public class LocationDto {
     private BigDecimal longitude;
 
     private BigDecimal speedKmh;
+    private BigDecimal heading;
     private BigDecimal headingDegrees;
     private BigDecimal batteryLevel;
     private Boolean ignitionOn;

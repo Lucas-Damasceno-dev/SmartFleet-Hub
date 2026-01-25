@@ -158,8 +158,8 @@ class GeofenceServiceIT {
         // Then
         assertThat(updated.getId()).isNotNull();
         assertThat(updated.getDriverId()).isEqualTo(1L);
-        assertThat(updated.getLocation().getY()).isCloseTo(PICKUP_LAT, Assertions.within(0.0001));
-        assertThat(updated.getLocation().getX()).isCloseTo(PICKUP_LON, Assertions.within(0.0001));
+        assertThat(updated.getLocation().getY()).isCloseTo(PICKUP_LAT, within(0.0001));
+        assertThat(updated.getLocation().getX()).isCloseTo(PICKUP_LON, within(0.0001));
 
         // And can be found in radius search
         List<DriverLocation> found = postGISGeofenceService.findDriversWithinRadius(

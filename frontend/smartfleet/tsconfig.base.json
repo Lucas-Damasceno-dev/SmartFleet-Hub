@@ -13,8 +13,12 @@
     "lib": ["es2020", "dom"],
     "skipLibCheck": true,
     "skipDefaultLibCheck": true,
+    "strict": true,
     "baseUrl": ".",
-    "paths": {}
+    "paths": {
+      "@smartfleet/tracking": ["libs/tracking/index.ts"],
+      "@smartfleet/tracking/*": ["libs/tracking/*"]
+    }
   },
   "exclude": ["node_modules", "tmp"]
 }
