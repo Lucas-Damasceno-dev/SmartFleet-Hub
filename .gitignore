@@ -1,0 +1,106 @@
+# ==========================================
+# SmartFleet Hub - Multi-tech .gitignore
+# Java, Node.js, Docker environments
+# ==========================================
+
+# --- Java / Maven ---
+target/
+!.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+*.class
+*.jar
+*.war
+*.ear
+*.log
+*.tmp
+
+# --- Spring Boot ---
+*.pid
+.springBeans
+application-local.properties
+application-local.yml
+
+# --- IDE - IntelliJ ---
+.idea/
+*.iws
+*.iml
+*.ipr
+out/
+!**/src/main/**/out/
+!**/src/test/**/out/
+
+# --- IDE - Eclipse ---
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+bin/
+!**/src/main/**/bin/
+!**/src/test/**/bin/
+
+# --- IDE - VSCode ---
+.vscode/
+*.code-workspace
+
+# --- Node.js / Frontend ---
+node_modules/
+dist/
+.angular/
+.nx/
+*.tsbuildinfo
+.eslintcache
+.stylelintcache
+
+# --- Ionic / Capacitor ---
+android/
+ios/
+www/
+plugins/
+
+# --- Nx ---
+.nx/cache
+.nx/workspace-data
+
+# --- Docker ---
+.docker/
+
+# --- Environment Variables ---
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# --- OS Generated ---
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# --- Logs ---
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# --- Test Coverage ---
+coverage/
+*.lcov
+.nyc_output/
+
+# --- Secrets & Credentials ---
+*.pem
+*.key
+*.p12
+firebase-admin.json
+google-credentials.json
+
+# --- Context Files (project specs) ---
+context-files/

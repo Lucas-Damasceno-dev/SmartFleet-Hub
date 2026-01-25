@@ -1,0 +1,56 @@
+#!/bin/bash
+# Commit Message Hook - Enforces Conventional Commits v1.0.0
+# Reference: https://www.conventionalcommits.org/en/v1.0.0/
+
+commit_msg_file=$1
+commit_msg=$(cat "$commit_msg_file")
+
+# Conventional Commits regex pattern
+# Format: <type>(<scope>): <description>
+# Types: feat, fix, docs, style, refactor, perf, test, build, ci, chore, revert
+pattern="^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\([a-zA-Z0-9_-]+\))?: .{1,100}$"
+
+# Allow merge commits
+if echo "$commit_msg" | grep -qE "^Merge"; then
+    exit 0
+fi
+
+# Allow revert commits
+if echo "$commit_msg" | grep -qE "^Revert"; then
+    exit 0
+fi
+
+# Check first line against pattern
+first_line=$(echo "$commit_msg" | head -n 1)
+
+if ! echo "$first_line" | grep -qE "$pattern"; then
+    echo ""
+    echo "╔════════════════════════════════════════════════════════════════╗"
+    echo "║  ❌ COMMIT MESSAGE DOES NOT FOLLOW CONVENTIONAL COMMITS v1.0.0 ║"
+    echo "╠════════════════════════════════════════════════════════════════╣"
+    echo "║  Expected format:                                              ║"
+    echo "║    <type>(<scope>): <description>                              ║"
+    echo "║                                                                ║"
+    echo "║  Allowed types:                                                ║"
+    echo "║    feat, fix, docs, style, refactor, perf, test,              ║"
+    echo "║    build, ci, chore, revert                                   ║"
+    echo "║                                                                ║"
+    echo "║  Scopes (optional):                                            ║"
+    echo "║    Backend:  auth, tracking, geo, payment, order              ║"
+    echo "║    Frontend: web, mobile, shared                              ║"
+    echo "║    Infra:    k8s, docker, terraform                           ║"
+    echo "║                                                                ║"
+    echo "║  Examples:                                                     ║"
+    echo "║    feat(tracking): add kafka producer for gps events          ║"
+    echo "║    fix(mobile): resolve battery drain issue                   ║"
+    echo "║    docs(api): update swagger response                         ║"
+    echo "║    chore(deps): upgrade spring boot to 4.0.2                  ║"
+    echo "╚════════════════════════════════════════════════════════════════╝"
+    echo ""
+    echo "Your commit message was:"
+    echo "  $first_line"
+    echo ""
+    exit 1
+fi
+
+exit 0
