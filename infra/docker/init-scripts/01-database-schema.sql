@@ -252,3 +252,44 @@ CREATE TRIGGER update_orders_updated_at
     BEFORE UPDATE ON orders
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
+
+-- ============================================
+-- DRIVER LOCATIONS TABLE (Live Tracking)
+-- For PostGIS spatial queries
+-- ============================================
+CREATE TABLE driver_locations (
+    id SERIAL PRIMARY KEY,
+    driver_id INTEGER NOT NULL REFERENCES drivers(driver_id) UNIQUE,
+    vehicle_id INTEGER REFERENCES vehicles(vehicle_id),
+    location GEOMETRY(Point, 4326) NOT NULL,
+    speed_kmh NUMERIC,
+    heading_degrees NUMERIC,
+    status TEXT DEFAULT 'AVAILABLE' CHECK (status IN ('AVAILABLE', 'BUSY', 'OFFLINE', 'ON_DELIVERY')),
+    last_updated TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    accuracy_meters NUMERIC,
+    current_order_id INTEGER REFERENCES orders(order_id)
+);
+
+-- Spatial index for location queries
+CREATE INDEX idx_driver_locations_spatial ON driver_locations USING GIST (location);
+CREATE INDEX idx_driver_locations_status ON driver_locations(status);
+CREATE INDEX idx_driver_locations_driver ON driver_locations(driver_id);
+
+-- ============================================
+-- ORDER LOCATIONS TABLE (Pickup/Delivery Points)
+-- ============================================
+CREATE TABLE order_locations (
+    order_id INTEGER PRIMARY KEY REFERENCES orders(order_id),
+    pickup_location GEOMETRY(Point, 4326) NOT NULL,
+    delivery_location GEOMETRY(Point, 4326) NOT NULL,
+    pickup_address TEXT,
+    delivery_address TEXT,
+    assigned_driver_id INTEGER REFERENCES drivers(driver_id),
+    status TEXT DEFAULT 'PENDING',
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Spatial indexes for order locations
+CREATE INDEX idx_order_locations_pickup ON order_locations USING GIST (pickup_location);
+CREATE INDEX idx_order_locations_delivery ON order_locations USING GIST (delivery_location);
+CREATE INDEX idx_order_locations_driver ON order_locations(assigned_driver_id);

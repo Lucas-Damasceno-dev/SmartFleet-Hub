@@ -53,3 +53,7 @@ geo:
   arrival-detection-radius-meters: 200
   eta-recalculation-interval-minutes: 5
   route-deviation-threshold-meters: 500
+  driver-search-radius-km: 5
+  provider: google  # Options: google, mock
+  google-maps:
+    api-key: ${GOOGLE_MAPS_API_KEY:}

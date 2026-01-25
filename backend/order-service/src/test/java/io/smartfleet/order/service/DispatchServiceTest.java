@@ -48,7 +48,7 @@ class DispatchServiceTest {
     private GeoServiceClient geoServiceClient;
 
     @Spy
-    private ObjectMapper objectMapper = new ObjectMapper();
+    private ObjectMapper objectMapper = new ObjectMapper().registerModule(new com.fasterxml.jackson.datatype.jsr310.JavaTimeModule());
 
     @InjectMocks
     private DispatchService dispatchService;
