@@ -8,11 +8,9 @@ WORKDIR /app
 # Copy Maven wrapper and pom files
 COPY .mvn/ .mvn/
 COPY mvnw pom.xml ./
-COPY ../pom.xml ../pom.xml
-COPY ../common-libs/ ../common-libs/
 
 # Download dependencies
-RUN ./mvnw dependency:go-offline -B
+RUN ./mvnw dependency:go-offline -B || true
 
 # Copy source code
 COPY src/ src/
@@ -24,15 +22,24 @@ RUN ./mvnw package -DskipTests -B
 FROM eclipse-temurin:21-jre-alpine AS runtime
 WORKDIR /app
 
+# Install wget for healthcheck
+RUN apk add --no-cache wget
+
 # Create non-root user for security
 RUN addgroup -S smartfleet && adduser -S smartfleet -G smartfleet
-USER smartfleet
 
 # Copy JAR from builder
 COPY --from=builder /app/target/*.jar app.jar
 
-# OpenTelemetry agent for distributed tracing
-ENV JAVA_TOOL_OPTIONS="-javaagent:/app/opentelemetry-javaagent.jar"
+# Create directory for OTel agent (mounted from volume)
+RUN mkdir -p /otel && chown smartfleet:smartfleet /otel
+
+USER smartfleet
+
+# Environment variables for OpenTelemetry
+ENV OTEL_SERVICE_NAME=auth-service
+ENV OTEL_EXPORTER_OTLP_ENDPOINT=http://sf-tempo:4317
+ENV OTEL_METRICS_EXPORTER=none
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
@@ -41,5 +48,5 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
 # Expose port
 EXPOSE 8080
 
-# Run application with virtual threads
-ENTRYPOINT ["java", "-XX:+UseZGC", "-XX:+ZGenerational", "-jar", "app.jar"]
+# Run application with virtual threads and OTel agent
+ENTRYPOINT ["java", "-XX:+UseZGC", "-XX:+ZGenerational", "-javaagent:/otel/opentelemetry-javaagent.jar", "-jar", "app.jar"]

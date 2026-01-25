@@ -150,7 +150,7 @@ services:
   keycloak:
     image: quay.io/keycloak/keycloak:24.0
     container_name: sf-keycloak
-    command: start-dev
+    command: start-dev --import-realm
     depends_on:
       postgres:
         condition: service_healthy
@@ -165,6 +165,8 @@ services:
       KC_METRICS_ENABLED: "true"
     ports:
       - "${KEYCLOAK_PORT:-8081}:8080"
+    volumes:
+      - ./infra/keycloak/realm-export.json:/opt/keycloak/data/import/realm-export.json:ro
     networks:
       - sf-net
     healthcheck:
@@ -178,6 +180,20 @@ services:
   # OBSERVABILITY
   # ============================================
   
+  # OpenTelemetry Agent Downloader (Init Container Pattern)
+  otel-agent-init:
+    image: curlimages/curl:latest
+    container_name: sf-otel-init
+    volumes:
+      - otel_agent:/otel
+    command: >
+      sh -c "if [ ! -f /otel/opentelemetry-javaagent.jar ]; then 
+        curl -L -o /otel/opentelemetry-javaagent.jar 
+        https://github.com/open-telemetry/opentelemetry-java-instrumentation/releases/download/v2.1.0/opentelemetry-javaagent.jar;
+      fi"
+    networks:
+      - sf-net
+
   tempo:
     image: grafana/tempo:latest
     container_name: sf-tempo
@@ -226,3 +242,4 @@ volumes:
   redis_data:
   tempo_data:
   grafana_data:
+  otel_agent:
