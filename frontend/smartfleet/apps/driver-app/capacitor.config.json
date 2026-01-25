@@ -1,0 +1,33 @@
+{
+  "appId": "io.smartfleet.driver",
+  "appName": "SmartFleet Driver",
+  "webDir": "www",
+  "bundledWebRuntime": false,
+  "server": {
+    "androidScheme": "https"
+  },
+  "plugins": {
+    "PushNotifications": {
+      "presentationOptions": ["badge", "sound", "alert"]
+    },
+    "SplashScreen": {
+      "launchShowDuration": 2000,
+      "backgroundColor": "#0F172A",
+      "showSpinner": true,
+      "spinnerColor": "#3B82F6"
+    },
+    "StatusBar": {
+      "style": "dark",
+      "backgroundColor": "#0F172A"
+    }
+  },
+  "android": {
+    "buildOptions": {
+      "keystorePath": "release.keystore",
+      "keystoreAlias": "smartfleet"
+    }
+  },
+  "ios": {
+    "scheme": "SmartFleet Driver"
+  }
+}

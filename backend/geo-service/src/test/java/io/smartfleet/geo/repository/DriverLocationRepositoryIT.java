@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.within;
 
 /**
  * Integration tests for DriverLocationRepository with PostGIS.
@@ -79,8 +80,8 @@ class DriverLocationRepositoryIT {
         // Then
         assertThat(found).isPresent();
         assertThat(found.get().getDriverId()).isEqualTo(1L);
-        assertThat(found.get().getLocation().getY()).isCloseTo(CENTER_LAT, Assertions.within(0.0001));
-        assertThat(found.get().getLocation().getX()).isCloseTo(CENTER_LON, Assertions.within(0.0001));
+        assertThat(found.get().getLocation().getY()).isCloseTo(CENTER_LAT, within(0.0001));
+        assertThat(found.get().getLocation().getX()).isCloseTo(CENTER_LON, within(0.0001));
     }
 
     @Test

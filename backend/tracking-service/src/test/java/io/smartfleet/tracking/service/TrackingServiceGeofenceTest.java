@@ -54,7 +54,7 @@ class TrackingServiceGeofenceTest {
     private ArgumentCaptor<String> kafkaValueCaptor;
 
     private TrackingService trackingService;
-    private ObjectMapper objectMapper = new ObjectMapper();
+    private ObjectMapper objectMapper = new ObjectMapper().registerModule(new com.fasterxml.jackson.datatype.jsr310.JavaTimeModule());
 
     // Pickup location
     private static final double PICKUP_LAT = -23.5629;
@@ -62,7 +62,7 @@ class TrackingServiceGeofenceTest {
 
     @BeforeEach
     void setUp() {
-        when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+        lenient().when(redisTemplate.opsForValue()).thenReturn(valueOperations);
         trackingService = new TrackingService(locationRepository, redisTemplate, objectMapper, kafkaTemplate);
     }
 

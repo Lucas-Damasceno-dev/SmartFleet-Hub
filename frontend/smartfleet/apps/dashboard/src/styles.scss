@@ -1,0 +1,279 @@
+/* Tailwind CSS */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Google Fonts - Inter */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+/* Leaflet CSS */
+@import 'leaflet/dist/leaflet.css';
+
+/* ==========================================================================
+   Dark Modern Logistics - Design System Base Styles
+   ========================================================================== */
+
+@layer base {
+  :root {
+    --color-primary: 59 130 246;
+    --color-surface: 15 23 42;
+    --color-surface-light: 30 41 59;
+    --color-text-primary: 248 250 252;
+    --color-text-secondary: 148 163 184;
+    --color-border: 51 65 85;
+  }
+
+  html {
+    @apply antialiased;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-surface-900 text-slate-100 font-sans;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Typography */
+  h1 { @apply text-h1 text-slate-50; }
+  h2 { @apply text-h2 text-slate-50; }
+  h3 { @apply text-h3 text-slate-100; }
+  h4 { @apply text-h4 text-slate-100; }
+
+  /* Links */
+  a {
+    @apply text-primary-400 hover:text-primary-300 transition-colors;
+  }
+
+  /* Focus states */
+  *:focus-visible {
+    @apply outline-none ring-2 ring-primary-500 ring-offset-2 ring-offset-surface-900;
+  }
+}
+
+/* ==========================================================================
+   Component Layer - Reusable UI Components
+   ========================================================================== */
+
+@layer components {
+  /* Card Components */
+  .card {
+    @apply bg-surface-800 rounded-card shadow-card border border-surface-700 p-4;
+  }
+
+  .card-elevated {
+    @apply card hover:shadow-card-hover transition-shadow duration-200;
+  }
+
+  .card-interactive {
+    @apply card-elevated cursor-pointer hover:border-primary-500/50 hover:bg-surface-700/50;
+  }
+
+  /* Button Components */
+  .btn {
+    @apply inline-flex items-center justify-center px-4 py-2 rounded-button font-medium
+           transition-all duration-200 shadow-button disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-primary {
+    @apply btn bg-primary-600 text-white hover:bg-primary-500 active:bg-primary-700;
+  }
+
+  .btn-secondary {
+    @apply btn bg-surface-700 text-slate-200 border border-surface-600
+           hover:bg-surface-600 hover:border-surface-500;
+  }
+
+  .btn-success {
+    @apply btn bg-success text-white hover:bg-success-light active:bg-success-dark;
+  }
+
+  .btn-danger {
+    @apply btn bg-danger text-white hover:bg-danger-light active:bg-danger-dark;
+  }
+
+  .btn-ghost {
+    @apply btn bg-transparent text-slate-300 hover:bg-surface-800 hover:text-slate-100;
+  }
+
+  .btn-icon {
+    @apply btn p-2 aspect-square;
+  }
+
+  /* Input Components */
+  .input {
+    @apply w-full px-3 py-2 bg-surface-800 border border-surface-600 rounded-input
+           text-slate-100 placeholder-slate-500
+           focus:border-primary-500 focus:ring-1 focus:ring-primary-500
+           transition-colors;
+  }
+
+  .input-error {
+    @apply input border-danger focus:border-danger focus:ring-danger;
+  }
+
+  .label {
+    @apply block text-body-sm font-medium text-slate-300 mb-1;
+  }
+
+  /* Badge Components */
+  .badge {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-caption font-medium;
+  }
+
+  .badge-primary { @apply badge bg-primary-500/20 text-primary-400; }
+  .badge-success { @apply badge bg-success/20 text-success-light; }
+  .badge-warning { @apply badge bg-warning/20 text-warning-light; }
+  .badge-danger { @apply badge bg-danger/20 text-danger-light; }
+  .badge-neutral { @apply badge bg-surface-700 text-slate-400; }
+
+  /* Status Indicator */
+  .status-dot {
+    @apply w-2.5 h-2.5 rounded-full;
+  }
+
+  .status-available { @apply status-dot bg-status-available shadow-glow-success; }
+  .status-busy { @apply status-dot bg-status-busy; }
+  .status-offline { @apply status-dot bg-status-offline; }
+  .status-on-delivery { @apply status-dot bg-status-onDelivery shadow-glow-primary; }
+
+  /* Modal Components */
+  .modal-overlay {
+    @apply fixed inset-0 bg-black/60 backdrop-blur-sm z-modal;
+  }
+
+  .modal-content {
+    @apply bg-surface-800 rounded-modal shadow-modal border border-surface-700 p-6
+           animate-slide-in;
+  }
+
+  /* Sidebar */
+  .sidebar {
+    @apply fixed left-0 top-0 h-full w-64 bg-surface-900 border-r border-surface-700
+           z-sidebar overflow-y-auto;
+  }
+
+  .sidebar-item {
+    @apply flex items-center gap-3 px-4 py-3 text-slate-400 
+           hover:bg-surface-800 hover:text-slate-100 transition-colors
+           border-l-2 border-transparent;
+  }
+
+  .sidebar-item-active {
+    @apply sidebar-item bg-surface-800 text-primary-400 border-l-primary-500;
+  }
+
+  /* Table Components */
+  .table {
+    @apply w-full text-left;
+  }
+
+  .table-header {
+    @apply text-caption font-semibold text-slate-400 uppercase tracking-wider
+           border-b border-surface-700 bg-surface-800/50;
+  }
+
+  .table-row {
+    @apply border-b border-surface-700/50 hover:bg-surface-800/30 transition-colors;
+  }
+
+  .table-cell {
+    @apply px-4 py-3 text-body-sm text-slate-300;
+  }
+
+  /* Map Container */
+  .map-container {
+    @apply w-full h-full rounded-card overflow-hidden;
+  }
+
+  /* Toast Notifications */
+  .toast {
+    @apply fixed bottom-4 right-4 z-toast min-w-80 p-4 rounded-card shadow-modal
+           animate-slide-in;
+  }
+
+  .toast-success { @apply toast bg-success-dark border-l-4 border-success; }
+  .toast-error { @apply toast bg-danger-dark border-l-4 border-danger; }
+  .toast-info { @apply toast bg-info-dark border-l-4 border-info; }
+}
+
+/* ==========================================================================
+   Utility Layer - Custom Utilities
+   ========================================================================== */
+
+@layer utilities {
+  /* Text utilities */
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  /* Scrollbar styling */
+  .scrollbar-dark {
+    scrollbar-width: thin;
+    scrollbar-color: theme('colors.surface.600') theme('colors.surface.800');
+  }
+
+  .scrollbar-dark::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  .scrollbar-dark::-webkit-scrollbar-track {
+    @apply bg-surface-800;
+  }
+
+  .scrollbar-dark::-webkit-scrollbar-thumb {
+    @apply bg-surface-600 rounded-full;
+  }
+
+  .scrollbar-dark::-webkit-scrollbar-thumb:hover {
+    @apply bg-surface-500;
+  }
+
+  /* Glass morphism effect */
+  .glass {
+    @apply bg-surface-900/80 backdrop-blur-md border border-surface-700/50;
+  }
+}
+
+/* ==========================================================================
+   Leaflet Custom Styles
+   ========================================================================== */
+
+.leaflet-container {
+  @apply bg-surface-900 font-sans;
+}
+
+.leaflet-popup-content-wrapper {
+  @apply bg-surface-800 text-slate-100 rounded-card border border-surface-700 shadow-modal;
+}
+
+.leaflet-popup-tip {
+  @apply bg-surface-800;
+}
+
+.leaflet-control-zoom {
+  @apply border-0 shadow-card;
+}
+
+.leaflet-control-zoom a {
+  @apply bg-surface-800 text-slate-300 border-surface-700 hover:bg-surface-700 hover:text-slate-100;
+}
+
+/* Custom Driver Marker */
+.driver-marker {
+  @apply w-10 h-10 rounded-full border-2 flex items-center justify-center
+         text-white font-semibold text-body-sm shadow-lg;
+}
+
+.driver-marker-available {
+  @apply driver-marker bg-status-available border-white shadow-glow-success;
+}
+
+.driver-marker-busy {
+  @apply driver-marker bg-status-busy border-white;
+}
+
+.driver-marker-on-delivery {
+  @apply driver-marker bg-status-onDelivery border-white shadow-glow-primary;
+}
