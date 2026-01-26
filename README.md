@@ -162,7 +162,7 @@ cd backend
 ### 5. Build & Run Frontend
 
 ```bash
-cd frontend/smartfleet
+cd frontend
 
 # Install dependencies
 npm ci
@@ -196,14 +196,13 @@ smartfleet-hub/
 │   ├── order-service/          # Order management & dispatch
 │   ├── payment-service/        # Pricing & billing
 │   └── tracking-service/       # GPS telemetry ingestion
-├── frontend/
-│   └── smartfleet/             # Nx monorepo
-│       ├── apps/
-│       │   ├── dashboard/      # Angular web app
-│       │   └── driver-app/     # Ionic mobile app
-│       └── libs/
-│           ├── shared-ui/      # Reusable components
-│           └── shared-types/   # TypeScript interfaces
+├── frontend/                   # Nx monorepo
+│   ├── apps/
+│   │   ├── dashboard/          # Angular web app
+│   │   └── driver-app/         # Ionic mobile app
+│   └── libs/
+│       ├── shared-ui/          # Reusable components
+│       └── shared-types/       # TypeScript interfaces
 ├── infra/
 │   ├── docker/                 # Docker configs & init scripts
 │   ├── grafana/                # Grafana provisioning
@@ -279,7 +278,7 @@ cd backend
 ### Frontend Tests
 
 ```bash
-cd frontend/smartfleet
+cd frontend
 
 # Unit tests
 npx nx test dashboard
