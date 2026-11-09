@@ -4,7 +4,6 @@
 
 A production-ready, cloud-native fleet management system built with modern microservices architecture.
 
-[![Backend CI](https://github.com/your-org/smartfleet-hub/actions/workflows/backend-ci.yml/badge.svg)](https://github.com/your-org/smartfleet-hub/actions/workflows/backend-ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ---
@@ -117,8 +116,8 @@ SmartFleet Hub is a comprehensive fleet management platform that provides:
 ### 1. Clone & Setup
 
 ```bash
-git clone https://github.com/your-org/smartfleet-hub.git
-cd smartfleet-hub
+git clone https://github.com/Lucas-Damasceno-dev/SmartFleet-Hub.git
+cd SmartFleet-Hub
 
 # Copy environment template
 cp .env.example .env
@@ -369,6 +368,5 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Support
 
-- 📧 Email: support@smartfleet.io
 - 📖 Documentation: [docs/](./docs/)
-- 🐛 Issues: [GitHub Issues](https://github.com/your-org/smartfleet-hub/issues)
+- 🐛 Issues: [GitHub Issues](https://github.com/Lucas-Damasceno-dev/SmartFleet-Hub/issues)
